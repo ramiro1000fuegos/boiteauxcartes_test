@@ -698,6 +698,7 @@ function startDeck(){
   });
 
   $("btn-stage-home").addEventListener("click", goToStart);
+  $("btn-catselect-home").addEventListener("click", openSettings);    
 
   // ---- Settings ---------------------------------------------------------
   function openSettings(){
@@ -708,6 +709,8 @@ function startDeck(){
   }
   $("btn-home-settings").addEventListener("click", openSettings);
   $("btn-stage-settings").addEventListener("click", openSettings);
+  $("btn-catselect-settings").addEventListener("click", openSettings);
+  $("btn-gameselect-settings").addEventListener("click", openSettings);  
   $("btn-settings-close").addEventListener("click", function(){ goToStart(); });
 
   function showMsg(el, text, kind){ el.textContent = text; el.className = "rv-inline-msg rv-visible rv-" + kind; }
