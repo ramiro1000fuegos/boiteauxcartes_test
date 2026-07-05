@@ -97,12 +97,6 @@
   p.rv-sub{ color:var(--text-muted); font-size:15px; line-height:1.5; margin:0 0 22px; }
 
   #screen-home{ align-items:center; justify-content:center; text-align:center; }
-  .rv-mark{
-    width:64px; height:64px; border-radius:50%;
-    background:radial-gradient(circle at 50% 40%, var(--spot), var(--spot-dim) 70%, transparent 72%);
-    margin:0 auto 22px;
-    filter: drop-shadow(0 0 24px rgba(232,163,61,.35));
-  }
 
   .rv-list-wrap{ flex:1; display:flex; flex-direction:column; min-height:0; }
   .rv-scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:8px; }
@@ -248,9 +242,8 @@
 
   <!-- ===================== HOME ===================== -->
   <section id="screen-home" class="rv-screen rv-active">
-    <div class="rv-mark" aria-hidden="true"></div>
-    <h1 class="rv-title">La boite aux cartes</h1>
-    <p class="rv-sub">Mélange les textes des catégories choisies puis les présente, un par un.<br>Pour Top Ten, Esquissé, et tout jeu au même principe.</p>
+      <h1 class="rv-title">La boite aux cartes</h1>
+    <p class="rv-sub">Des sets personnalisés de cartes de jeux comme Top Ten ou Esquissé, dans ton téléphone. Choisis un jeu, sélectionne les catégories souhaitées et laisse le hasard piocher pour toi.</p>
     <button class="rv-btn rv-btn-primary" id="btn-home-start" style="margin-bottom:12px;">Commencer</button>
     <button class="rv-btn-text" id="btn-home-settings">Gérer les sources de textes</button>
   </section>
