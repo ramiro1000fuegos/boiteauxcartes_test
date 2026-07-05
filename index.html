@@ -473,9 +473,20 @@
 
   // ---- Bootstrap / navigation ----------------------------------------------
   function bootstrap(){
-    allRows = buildAggregateRows();
-    refreshAllSourcesInBackground();
-    goToStart();
+    var sources = getSources();
+    if (sources.length === 0 && DEFAULT_SOURCES.length){
+      var btn = $("btn-home-start");
+      var originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "Chargement…";
+      restoreDefaultSources(function(){
+        btn.disabled = false;
+        btn.textContent = originalText;
+        goToStart();
+      });
+    } else {
+      goToStart();
+    }
   }
 
   function goToStart(){
@@ -570,7 +581,8 @@
     return a;
   }
 
-  function startDeck(){
+function startDeck(){
+    allRows = buildAggregateRows(); // relit le cache local, mis à jour depuis le bootstrap
     deck = shuffle(buildPool());
     deckTotal = deck.length;
     deckPos = 0;
@@ -786,14 +798,11 @@
 
   function escapeHtml(s){ var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
 
-  $("btn-restore-defaults").addEventListener("click", function(){
+  function restoreDefaultSources(cb){
     var sources = getSources();
     var existingUrls = sources.map(function(s){ return s.url; });
     var toAdd = DEFAULT_SOURCES.filter(function(u){ return existingUrls.indexOf(u) === -1; });
-    if (!toAdd.length){
-      showMsg($("add-source-msg"), "Rien à restaurer — aucune source par défaut manquante (ou aucune définie).", "neutral");
-      return;
-    }
+    if (!toAdd.length){ if (cb) cb(false); return; }
     var remaining = toAdd.length;
     toAdd.forEach(function(u){
       fetchAndParse(u, function(err, rows){
@@ -806,8 +815,17 @@
             setCache(u, rows);
           }
         }
-        if (remaining === 0) renderSourceList();
+        if (remaining === 0 && cb) cb(true);
       });
+    });
+  }
+
+  $("btn-restore-defaults").addEventListener("click", function(){
+    restoreDefaultSources(function(added){
+      if (!added){
+        showMsg($("add-source-msg"), "Rien à restaurer — aucune source par défaut manquante (ou aucune définie).", "neutral");
+      }
+      renderSourceList();
     });
   });
 
