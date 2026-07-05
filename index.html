@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>Révèle</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+<style>
+  :root{
+    --bg: #15121B;
+    --bg-raised: #1E1A26;
+    --spot: #E8A33D;
+    --spot-dim: #7A5A26;
+    --text: #F4EEE3;
+    --text-muted: #948C9E;
+    --teal: #4E9E97;
+    --danger: #C1595A;
+    --line: #2C2733;
+    --font-display: "Fraunces", Georgia, serif;
+    --font-ui: "Inter", system-ui, sans-serif;
+    --rv-red: #E2707A;
+    --rv-green: #7FBE8E;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--font-ui);
+    overflow:hidden;
+    height:100dvh;
+    display:flex;
+    flex-direction:column;
+  }
+  button{font-family:inherit; cursor:pointer;}
+  button:focus-visible, input:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--spot);
+    outline-offset:3px;
+  }
+  input{font-family:inherit;}
+
+  .rv-screen{
+    flex:1;
+    display:none;
+    flex-direction:column;
+    min-height:0;
+    padding:max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+  }
+  .rv-screen.rv-active{display:flex;}
+
+  .rv-topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding-bottom:14px;
+    flex-shrink:0;
+  }
+  .rv-topbar-info{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+  .rv-eyebrow{ font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-muted); }
+  .rv-game-name{
+    font-family:var(--font-display); font-weight:600; font-size:18px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .rv-icon-btn{
+    background:var(--bg-raised); border:1px solid var(--line); color:var(--text-muted);
+    width:38px; height:38px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    transition:border-color .15s, color .15s;
+  }
+  .rv-icon-btn:hover{border-color:var(--spot-dim); color:var(--text);}
+  .rv-icon-btn svg{width:18px; height:18px;}
+
+  .rv-btn{
+    border:none; border-radius:12px; padding:15px 22px;
+    font-size:16px; font-weight:600; font-family:var(--font-ui);
+  }
+  .rv-btn-primary{ background:var(--spot); color:#1B140A; }
+  .rv-btn-primary:active{transform:scale(.98);}
+  .rv-btn-primary:disabled{opacity:.4;}
+  .rv-btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--text); }
+  .rv-btn-ghost:hover{border-color:var(--spot-dim);}
+  .rv-btn-text{
+    background:none; border:none; color:var(--text-muted);
+    font-size:14px; text-decoration:underline; text-underline-offset:3px; padding:6px;
+  }
+  .rv-btn-text:hover{color:var(--text);}
+
+  h1.rv-title{ font-family:var(--font-display); font-weight:700; font-size:clamp(26px, 7vw, 34px); margin:0 0 6px; }
+  p.rv-sub{ color:var(--text-muted); font-size:15px; line-height:1.5; margin:0 0 22px; }
+
+  #screen-home{ align-items:center; justify-content:center; text-align:center; }
+  .rv-mark{
+    width:64px; height:64px; border-radius:50%;
+    background:radial-gradient(circle at 50% 40%, var(--spot), var(--spot-dim) 70%, transparent 72%);
+    margin:0 auto 22px;
+    filter: drop-shadow(0 0 24px rgba(232,163,61,.35));
+  }
+
+  .rv-list-wrap{ flex:1; display:flex; flex-direction:column; min-height:0; }
+  .rv-scroll{ flex:1; overflow-y:auto; -webkit-overflow-scrolling:touch; padding-bottom:8px; }
+  .rv-option{
+    display:flex; align-items:center; justify-content:space-between; width:100%;
+    background:var(--bg-raised); border:1px solid var(--line); border-radius:12px;
+    padding:16px 18px; margin-bottom:10px; color:var(--text);
+    font-family:var(--font-display); font-size:18px; text-align:left;
+  }
+  .rv-option:hover{border-color:var(--spot-dim);}
+  .rv-option svg{width:16px; height:16px; color:var(--text-muted); flex-shrink:0;}
+
+  .rv-chip-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  .rv-chip{
+    border:1px solid var(--line); background:transparent; color:var(--text-muted);
+    border-radius:999px; padding:9px 15px; font-size:14px; font-weight:500;
+    transition:background .15s, color .15s, border-color .15s;
+  }
+  .rv-chip[aria-pressed="true"]{ background:var(--teal); border-color:var(--teal); color:#0D2422; font-weight:600; }
+  .rv-util-row{ display:flex; gap:16px; margin-bottom:16px; }
+  .rv-footer-actions{ flex-shrink:0; padding-top:12px; display:flex; flex-direction:column; gap:10px; }
+  .rv-count-note{ font-size:13px; color:var(--text-muted); text-align:center; }
+
+  /* ---------- stage ---------- */
+  #screen-stage{ padding:0; position:relative; }
+  .rv-stage-topbar{ padding:max(18px, env(safe-area-inset-top)) 18px 10px; flex-shrink:0; }
+
+  .rv-stage-content{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    min-height:0;
+    padding:20px;
+  }
+  .rv-spotlight{
+    position:absolute; inset:0;
+    background: radial-gradient(circle at 50% 42%, rgba(232,163,61,.16), transparent 60%);
+    opacity:0; transition:opacity .5s ease; pointer-events:none;
+  }
+  .rv-spotlight.rv-on{opacity:1;}
+
+  .rv-idle-hint{
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    color:var(--text-muted);
+  }
+  .rv-idle-hint svg{width:40px; height:40px; opacity:.5;}
+
+  .rv-card{
+    display:none; flex-direction:column; align-items:center; gap:22px;
+    width:100%; max-width:520px; animation:rv-rise .45s ease;
+  }
+  .rv-card.rv-visible{display:flex;}
+  @keyframes rv-rise{
+    from{opacity:0; transform:translateY(14px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  .rv-category-tag{
+    font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--teal);
+    background:rgba(78,158,151,.12); border:1px solid rgba(78,158,151,.35);
+    border-radius:999px; padding:5px 14px;
+  }
+  .rv-text-content{
+    font-family:var(--font-display); font-weight:600;
+    font-size:clamp(22px, 6vw, 32px); line-height:1.35; text-align:center;
+    max-height:44vh; overflow-y:auto; padding:0 4px;
+  }
+  .rv-text-content b, .rv-text-content strong{font-weight:800;}
+
+  .rv-empty-hint{ display:none; flex-direction:column; align-items:center; gap:8px; text-align:center; }
+  .rv-empty-hint.rv-visible{display:flex;}
+
+  /* action bar : toujours la même position/hauteur, jamais collée au bord */
+  .rv-stage-actionbar{
+    flex-shrink:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+    padding:14px 18px calc(env(safe-area-inset-bottom, 0px) + 30px);
+  }
+  .rv-dots{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; max-width:280px; }
+  .rv-dot{ width:7px; height:7px; border-radius:50%; background:var(--line); }
+  .rv-dot.rv-used{background:var(--spot-dim);}
+  .rv-count-text{ font-size:13px; color:var(--text-muted); }
+
+  #btn-main{
+    width:100%;
+    max-width:420px;
+    height:60px;
+    border-radius:16px;
+    font-family:var(--font-display);
+    font-weight:700;
+    font-size:19px;
+  }
+  #btn-main.rv-mode-reveal{ background:var(--spot); color:#1B140A; border:none; }
+  #btn-main.rv-mode-hide{ background:transparent; color:var(--text); border:1.5px solid var(--line); }
+  #btn-main.rv-mode-reshuffle{ background:var(--spot); color:#1B140A; border:none; }
+  #btn-main:active{transform:scale(.98);}
+
+  /* ---------- settings ---------- */
+  #screen-settings{ position:fixed; inset:0; background:var(--bg); z-index:20; }
+  .rv-field-label{ font-size:13px; color:var(--text-muted); margin-bottom:8px; display:block; }
+  .rv-input{
+    width:100%; background:var(--bg-raised); border:1px solid var(--line);
+    border-radius:10px; padding:13px 14px; color:var(--text); font-size:15px;
+  }
+  .rv-hint{ font-size:13px; color:var(--text-muted); line-height:1.5; margin:10px 0 22px; }
+  .rv-hint code{ background:var(--bg-raised); border-radius:4px; padding:1px 5px; font-size:12px; }
+  .rv-inline-msg{ font-size:13px; border-radius:8px; padding:9px 12px; margin-top:10px; display:none; }
+  .rv-inline-msg.rv-visible{display:block;}
+  .rv-inline-msg.rv-ok{background:rgba(78,158,151,.12); color:var(--teal); border:1px solid rgba(78,158,151,.35);}
+  .rv-inline-msg.rv-err{background:rgba(193,89,90,.1); color:#E8A5A5; border:1px solid rgba(193,89,90,.4);}
+  .rv-inline-msg.rv-neutral{background:var(--bg-raised); color:var(--text-muted); border:1px solid var(--line);}
+
+  .rv-source-section-title{
+    font-size:13px; color:var(--text-muted); margin:26px 0 10px;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .rv-source-card{ background:var(--bg-raised); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; }
+  .rv-source-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .rv-source-label{ font-family:var(--font-display); font-weight:600; font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .rv-source-meta{ font-size:13px; color:var(--text-muted); margin-top:3px; }
+  .rv-source-actions{ display:flex; gap:6px; flex-shrink:0; }
+  .rv-source-actions button{ background:none; border:none; color:var(--text-muted); width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+  .rv-source-actions button:hover{ color:var(--text); background:rgba(255,255,255,.05); }
+  .rv-source-actions svg{width:16px; height:16px;}
+  .rv-source-details{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:13px; color:var(--text-muted); display:none; }
+  .rv-source-details.rv-open{display:block;}
+  .rv-source-game-row{ display:flex; justify-content:space-between; padding:4px 0; }
+  .rv-empty-sources{ font-size:14px; color:var(--text-muted); text-align:center; padding:20px 0; }
+
+  [hidden]{display:none !important;}
+
+  @media (prefers-reduced-motion: reduce){
+    .rv-card{animation:none !important;}
+    .rv-spotlight{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+  <!-- ===================== HOME ===================== -->
+  <section id="screen-home" class="rv-screen rv-active">
+    <div class="rv-mark" aria-hidden="true"></div>
+    <h1 class="rv-title">Révèle</h1>
+    <p class="rv-sub">Un texte au hasard, révélé puis caché.<br>Pour Top Ten, Esquissé, et tout jeu au même principe.</p>
+    <button class="rv-btn rv-btn-primary" id="btn-home-start" style="margin-bottom:12px;">Commencer</button>
+    <button class="rv-btn-text" id="btn-home-settings">Gérer les sources de textes</button>
+  </section>
+
+  <!-- ===================== GAME SELECT ===================== -->
+  <section id="screen-game-select" class="rv-screen">
+    <div class="rv-list-wrap">
+      <h1 class="rv-title">Quel jeu ?</h1>
+      <p class="rv-sub">Plusieurs jeux ont été trouvés dans tes sources.</p>
+      <div class="rv-scroll" id="game-list"></div>
+    </div>
+  </section>
+
+  <!-- ===================== CATEGORY SELECT ===================== -->
+  <section id="screen-category-select" class="rv-screen">
+    <div class="rv-list-wrap">
+      <h1 class="rv-title">Quelles catégories ?</h1>
+      <p class="rv-sub">Décoche celles que tu ne veux pas utiliser.</p>
+      <div class="rv-scroll">
+        <div class="rv-util-row">
+          <button class="rv-btn-text" id="btn-cat-all">Tout cocher</button>
+          <button class="rv-btn-text" id="btn-cat-none">Tout décocher</button>
+        </div>
+        <div class="rv-chip-row" id="category-list"></div>
+      </div>
+      <div class="rv-footer-actions">
+        <p class="rv-count-note" id="cat-count-note"></p>
+        <button class="rv-btn rv-btn-primary" id="btn-cat-play">Jouer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== STAGE ===================== -->
+  <section id="screen-stage" class="rv-screen">
+    <div class="rv-stage-topbar rv-topbar">
+      <div class="rv-topbar-info">
+        <span class="rv-eyebrow">En cours</span>
+        <span class="rv-game-name" id="stage-game-name">—</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="rv-icon-btn" id="btn-stage-home" aria-label="Retour au choix du jeu" title="Accueil">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        </button>
+        <button class="rv-icon-btn" id="btn-stage-settings" aria-label="Paramètres" title="Paramètres">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="rv-stage-content">
+      <div class="rv-spotlight" id="spotlight" aria-hidden="true"></div>
+
+      <div class="rv-idle-hint" id="stage-idle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg>
+        <span>Appuie sur Révéler pour commencer</span>
+      </div>
+
+      <div class="rv-card" id="stage-card">
+        <span class="rv-category-tag" id="card-category"></span>
+        <div class="rv-text-content" id="card-text"></div>
+      </div>
+
+      <div class="rv-empty-hint" id="stage-empty">
+        <span class="rv-sub" style="margin:0;">Paquet épuisé.</span>
+      </div>
+    </div>
+
+    <div class="rv-stage-actionbar">
+      <div class="rv-dots" id="deck-dots"></div>
+      <span class="rv-count-text" id="deck-count-text"></span>
+      <button class="rv-btn rv-mode-reveal" id="btn-main">Révéler</button>
+    </div>
+  </section>
+
+  <!-- ===================== SETTINGS ===================== -->
+  <section id="screen-settings" class="rv-screen">
+    <div class="rv-topbar">
+      <div class="rv-topbar-info">
+        <span class="rv-eyebrow">Réglages</span>
+        <span class="rv-game-name">Sources de textes</span>
+      </div>
+      <button class="rv-icon-btn" id="btn-settings-close" aria-label="Fermer">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div class="rv-scroll">
+      <label class="rv-field-label" for="input-csv-url">Ajouter une source (colle une URL CSV, elle s'ajoute automatiquement)</label>
+      <input class="rv-input" id="input-csv-url" type="url" inputmode="url" placeholder="https://docs.google.com/…/pub?output=csv">
+      <div class="rv-inline-msg" id="add-source-msg"></div>
+      <p class="rv-hint">
+        3 colonnes attendues : <code>jeu</code>, <code>categorie</code>, <code>texte</code>.<br>
+        Formatage autorisé dans <code>texte</code> : <code>&lt;br&gt;</code>, <code>&lt;b&gt;</code>,
+        <code>&lt;span color="rouge"&gt;</code>, <code>&lt;span color="vert"&gt;</code>. Le reste est ignoré.
+      </p>
+
+      <div class="rv-source-section-title">
+        <span>Sources mémorisées</span>
+        <button class="rv-btn-text" id="btn-restore-defaults">Restaurer les sources par défaut</button>
+      </div>
+      <div id="source-list"></div>
+    </div>
+  </section>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---- Config ---------------------------------------------------------
+  var DEFAULT_SOURCES = [
+    // "https://docs.google.com/spreadsheets/d/e/…/pub?output=csv"
+  ];
+
+  var STORAGE_SOURCES = "revele.sources";
+  var STORAGE_VIEWS = "revele.viewCounts";
+  var CACHE_PREFIX = "revele.cache.";
+
+  var SAMPLE_ROWS = [
+    {jeu:"Exemple : Top Ten", categorie:"Réactions", texte:"Une boule de pétanque est tombée sur ton pied. Réagis, de <span color=\"vert\">(-) pas mal du tout</span> à <span color=\"rouge\">(+) très très mal</span>."},
+    {jeu:"Exemple : Top Ten", categorie:"Réactions", texte:"Tu croises ton ex au supermarché. Réagis, de <span color=\"vert\">(-) indifférence totale</span> à <span color=\"rouge\">(+) fuite immédiate</span>."},
+    {jeu:"Exemple : Top Ten", categorie:"Classement", texte:"Classe ces desserts <b>du moins bon au meilleur</b> :<br>flan, tarte aux pommes, mousse au chocolat."},
+    {jeu:"Exemple : Top Ten", categorie:"Classement", texte:"Classe ces animaux <b>du moins au plus dangereux</b> à mains nues :<br>oie, chèvre, cygne."},
+    {jeu:"Exemple : Esquissé", categorie:"Phrases", texte:"Un pingouin fait du skateboard sur la banquise."},
+    {jeu:"Exemple : Esquissé", categorie:"Phrases", texte:"Le facteur livre une pizza par erreur au président."},
+    {jeu:"Exemple : Esquissé", categorie:"Objets", texte:"Une théière qui joue de la trompette."},
+    {jeu:"Exemple : Esquissé", categorie:"Objets", texte:"Un parapluie transformé en fusée."}
+  ];
+
+  // ---- cyrb53 (hash rapide non cryptographique) ----------------------------
+  function cyrb53(str, seed){
+    seed = seed || 0;
+    var h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+    for (var i = 0, ch; i < str.length; i++){
+      ch = str.charCodeAt(i);
+      h1 = Math.imul(h1 ^ ch, 2654435761);
+      h2 = Math.imul(h2 ^ ch, 1597334677);
+    }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+    h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+    h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    var out = 4294967296 * (2097151 & h2) + (h1 >>> 0);
+    return out.toString(36);
+  }
+  function cardKey(row){
+    return cyrb53((row.jeu||"") + "|" + (row.categorie||"") + "|" + (row.texte||""));
+  }
+
+  // ---- Poids de priorité par rang (décroissance géométrique) -----------------
+  // rang 0 (le moins vu) a le plus de poids ; plus le rang grimpe, moins la
+  // carte est prioritaire. Décroissance douce : une grosse "vague" de cartes
+  // neuves (nouvelle catégorie, nouvelle source) reste favorisée sans jamais
+  // monopoliser tout le début de partie (vérifié par simulation).
+  function rankWeight(rank){ return Math.pow(2, -rank); }
+
+  // ---- DOMPurify config ---------------------------------------------------
+  DOMPurify.addHook("uponSanitizeAttribute", function(node, data){
+    if (data.attrName === "color"){
+      var v = (data.attrValue || "").toLowerCase().trim();
+      if (v !== "rouge" && v !== "vert"){ data.keepAttr = false; }
+    }
+  });
+  var PURIFY_CONFIG = { ALLOWED_TAGS: ["br","b","strong","span"], ALLOWED_ATTR: ["color"] };
+  function sanitizeCardText(raw){
+    var clean = DOMPurify.sanitize(raw || "", PURIFY_CONFIG);
+    return clean
+      .replace(/<span color="rouge">/g, '<span style="color:var(--rv-red)">')
+      .replace(/<span color="vert">/g, '<span style="color:var(--rv-green)">');
+  }
+
+  // ---- State ------------------------------------------------------------
+  var allRows = [];
+  var games = [];
+  var currentGameKey = null;
+  var currentGameLabel = "";
+  var categoriesForGame = [];
+  var selectedCategoryKeys = new Set();
+  var deck = [];
+  var deckPos = 0;
+  var deckTotal = 0;
+  var stageMode = "reveal"; // reveal | hide | reshuffle
+
+  var $ = function(id){ return document.getElementById(id); };
+  var screens = ["home","game-select","category-select","stage","settings"];
+  function showScreen(name){
+    screens.forEach(function(s){ $("screen-"+s).classList.toggle("rv-active", s === name); });
+  }
+
+  function normalizeKey(k){
+    return (k||"").toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  }
+  function isHttpUrl(u){ return /^https?:\/\//i.test((u||"").trim()); }
+  function uniqueBy(rows, field){
+    var map = {}, order = [];
+    rows.forEach(function(r){
+      var k = normalizeKey(r[field]);
+      if (!(k in map)){ map[k] = r[field]; order.push(k); }
+    });
+    return order.map(function(k){ return {key:k, label:map[k]}; });
+  }
+
+  // ---- View counts (localStorage, global per card key) ----------------------
+  function getViewCounts(){
+    try { return JSON.parse(localStorage.getItem(STORAGE_VIEWS) || "{}"); }
+    catch(e){ return {}; }
+  }
+  function saveViewCounts(obj){
+    try { localStorage.setItem(STORAGE_VIEWS, JSON.stringify(obj)); } catch(e){}
+  }
+  function incrementViewCount(key){
+    var counts = getViewCounts();
+    counts[key] = (counts[key] || 0) + 1;
+    saveViewCounts(counts);
+  }
+
+  // ---- Sources registry (localStorage) -----------------------------------
+  function getSources(){
+    try { return JSON.parse(localStorage.getItem(STORAGE_SOURCES) || "[]"); }
+    catch(e){ return []; }
+  }
+  function saveSources(list){ try { localStorage.setItem(STORAGE_SOURCES, JSON.stringify(list)); } catch(e){} }
+  function getCache(url){
+    try { var raw = localStorage.getItem(CACHE_PREFIX + url); return raw ? JSON.parse(raw) : null; }
+    catch(e){ return null; }
+  }
+  function setCache(url, rows){
+    try { localStorage.setItem(CACHE_PREFIX + url, JSON.stringify({fetchedAt: Date.now(), rows: rows})); } catch(e){}
+  }
+  function removeCache(url){ try { localStorage.removeItem(CACHE_PREFIX + url); } catch(e){} }
+
+  function rowsFromParsed(data){
+    var out = [];
+    data.forEach(function(row){
+      var normalized = {};
+      Object.keys(row || {}).forEach(function(k){ normalized[normalizeKey(k)] = (row[k]||"").toString().trim(); });
+      var jeu = normalized["jeu"] || "";
+      var categorie = normalized["categorie"] || normalized["catégorie"] || "";
+      var texte = normalized["texte"] || "";
+      if (jeu && texte){
+        var r = {jeu:jeu, categorie: categorie || "Général", texte:texte};
+        r.key = cardKey(r);
+        out.push(r);
+      }
+    });
+    return out;
+  }
+
+  function fetchAndParse(url, cb){
+    Papa.parse(url, {
+      download:true, header:true, skipEmptyLines:true,
+      complete:function(results){
+        var rows = rowsFromParsed(results.data || []);
+        if (!rows.length) cb(new Error("empty")); else cb(null, rows);
+      },
+      error:function(err){ cb(err || new Error("fetch failed")); }
+    });
+  }
+
+  function buildAggregateRows(){
+    var sources = getSources();
+    if (sources.length === 0) return SAMPLE_ROWS.slice().map(function(r){ r.key = cardKey(r); return r; });
+    var merged = [];
+    sources.forEach(function(s){
+      var cached = getCache(s.url);
+      if (cached && cached.rows) merged = merged.concat(cached.rows);
+    });
+    return merged.length ? merged : SAMPLE_ROWS.slice().map(function(r){ r.key = cardKey(r); return r; });
+  }
+
+  function refreshAllSourcesInBackground(){
+    getSources().forEach(function(s){
+      fetchAndParse(s.url, function(err, rows){ if (!err) setCache(s.url, rows); });
+    });
+  }
+
+  // ---- Bootstrap / navigation ----------------------------------------------
+  function bootstrap(){
+    allRows = buildAggregateRows();
+    refreshAllSourcesInBackground();
+    goToStart();
+  }
+
+  function goToStart(){
+    allRows = buildAggregateRows();
+    games = uniqueBy(allRows, "jeu");
+    if (games.length > 1){ renderGameList(); showScreen("game-select"); }
+    else if (games.length === 1){ selectGame(games[0].key, games[0].label); }
+    else { showScreen("home"); }
+  }
+
+  function renderGameList(){
+    var wrap = $("game-list");
+    wrap.innerHTML = "";
+    games.forEach(function(g){
+      var btn = document.createElement("button");
+      btn.className = "rv-option";
+      btn.innerHTML = "<span></span><svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M9 18l6-6-6-6'/></svg>";
+      btn.querySelector("span").textContent = g.label;
+      btn.addEventListener("click", function(){ selectGame(g.key, g.label); });
+      wrap.appendChild(btn);
+    });
+  }
+
+  function selectGame(key, label){
+    currentGameKey = key;
+    currentGameLabel = label;
+    var rowsForGame = allRows.filter(function(r){ return normalizeKey(r.jeu) === key; });
+    categoriesForGame = uniqueBy(rowsForGame, "categorie");
+    if (categoriesForGame.length > 1){
+      selectedCategoryKeys = new Set(categoriesForGame.map(function(c){ return c.key; }));
+      renderCategoryList();
+      showScreen("category-select");
+    } else {
+      selectedCategoryKeys = new Set(categoriesForGame.map(function(c){ return c.key; }));
+      startDeck();
+    }
+  }
+
+  function renderCategoryList(){
+    var wrap = $("category-list");
+    wrap.innerHTML = "";
+    categoriesForGame.forEach(function(cat){
+      var chip = document.createElement("button");
+      chip.className = "rv-chip"; chip.type = "button"; chip.textContent = cat.label;
+      chip.setAttribute("aria-pressed", selectedCategoryKeys.has(cat.key) ? "true" : "false");
+      chip.addEventListener("click", function(){
+        if (selectedCategoryKeys.has(cat.key)) selectedCategoryKeys.delete(cat.key);
+        else selectedCategoryKeys.add(cat.key);
+        chip.setAttribute("aria-pressed", selectedCategoryKeys.has(cat.key) ? "true" : "false");
+        updateCatCountNote();
+      });
+      wrap.appendChild(chip);
+    });
+    updateCatCountNote();
+  }
+
+  function updateCatCountNote(){
+    var n = countRowsForSelection();
+    $("cat-count-note").textContent = n + (n > 1 ? " textes sélectionnés" : " texte sélectionné");
+    $("btn-cat-play").disabled = n === 0;
+  }
+  function countRowsForSelection(){
+    return allRows.filter(function(r){
+      return normalizeKey(r.jeu) === currentGameKey && selectedCategoryKeys.has(normalizeKey(r.categorie));
+    }).length;
+  }
+
+  $("btn-cat-all").addEventListener("click", function(){
+    selectedCategoryKeys = new Set(categoriesForGame.map(function(c){ return c.key; }));
+    renderCategoryList();
+  });
+  $("btn-cat-none").addEventListener("click", function(){ selectedCategoryKeys = new Set(); renderCategoryList(); });
+  $("btn-cat-play").addEventListener("click", startDeck);
+
+  // ---- Deck construction : tirage pondéré sans remise (Efraimidis-Spirakis) --
+  function buildPool(){
+    return allRows.filter(function(r){
+      return normalizeKey(r.jeu) === currentGameKey && selectedCategoryKeys.has(normalizeKey(r.categorie));
+    });
+  }
+
+  function buildWeightedDeckOrder(pool){
+    // 1) compteurs de vues bruts, pour cette sélection précise
+    var counts = getViewCounts();
+    var rawCounts = pool.map(function(item){ return counts[item.key] || 0; });
+
+    // 2) compression en rangs denses (0,1,2… quel que soit l'écart brut de vues)
+    var distinct = Array.from(new Set(rawCounts)).sort(function(a,b){ return a-b; });
+    var rankOf = {};
+    distinct.forEach(function(v, i){ rankOf[v] = i; });
+
+    // 3) tirage pondéré sans remise : chaque carte reçoit une clé u^(1/poids),
+    // on trie par clé décroissante. Équivalent à piocher au hasard les cartes
+    // une par une avec une probabilité proportionnelle au poids, sans jamais
+    // remettre une carte déjà tirée. Contrairement à un tri de bruits i.i.d.,
+    // ce mécanisme ne s'aggrave pas quand le groupe prioritaire est grand
+    // (vérifié par simulation) : les cartes à 0 vue restent favorisées sans
+    // jamais monopoliser le début de partie, que ce soit une seule carte
+    // neuve ou une catégorie entière tout juste ajoutée.
+    // Cas dégénéré (toutes les cartes au même rang) : les poids sont égaux,
+    // la clé redevient un simple nombre aléatoire uniforme → ordre purement
+    // aléatoire, sans avoir besoin d'un mélange préalable séparé.
+    var scored = pool.map(function(item, i){
+      var rank = rankOf[rawCounts[i]];
+      var weight = rankWeight(rank);
+      var key = Math.pow(Math.random(), 1 / weight);
+      return { item: item, key: key };
+    });
+    scored.sort(function(a, b){ return b.key - a.key; });
+    return scored.map(function(s){ return s.item; });
+  }
+
+  function startDeck(){
+    deck = buildWeightedDeckOrder(buildPool());
+    deckTotal = deck.length;
+    deckPos = 0;
+    $("stage-game-name").textContent = currentGameLabel;
+    resetStageVisual();
+    renderDots();
+    showScreen("stage");
+  }
+
+  function resetStageVisual(){
+    $("stage-idle").style.display = "flex";
+    $("stage-card").classList.remove("rv-visible");
+    $("stage-empty").classList.remove("rv-visible");
+    $("spotlight").classList.remove("rv-on");
+    setMainButton("reveal");
+  }
+
+  function renderDots(){
+    var wrap = $("deck-dots");
+    wrap.innerHTML = "";
+    if (deckTotal <= 40){
+      for (var i = 0; i < deckTotal; i++){
+        var d = document.createElement("span");
+        d.className = "rv-dot" + (i < deckPos ? " rv-used" : "");
+        wrap.appendChild(d);
+      }
+      $("deck-count-text").textContent = "";
+    } else {
+      $("deck-count-text").textContent = (deckTotal - deckPos) + " / " + deckTotal + " restants";
+    }
+  }
+
+  function setMainButton(mode){
+    stageMode = mode;
+    var btn = $("btn-main");
+    btn.classList.remove("rv-mode-reveal", "rv-mode-hide", "rv-mode-reshuffle");
+    if (mode === "reveal"){ btn.textContent = "Révéler"; btn.classList.add("rv-mode-reveal"); }
+    else if (mode === "hide"){ btn.textContent = "Cacher"; btn.classList.add("rv-mode-hide"); }
+    else { btn.textContent = "Remélanger"; btn.classList.add("rv-mode-reshuffle"); }
+  }
+
+  function reveal(){
+    if (deckPos >= deckTotal){
+      $("stage-idle").style.display = "none";
+      $("stage-empty").classList.add("rv-visible");
+      setMainButton("reshuffle");
+      return;
+    }
+    var item = deck[deckPos];
+    deckPos++;
+    incrementViewCount(item.key);
+    $("card-category").textContent = item.categorie;
+    $("card-text").innerHTML = sanitizeCardText(item.texte);
+    $("stage-idle").style.display = "none";
+    $("stage-card").classList.add("rv-visible");
+    $("spotlight").classList.add("rv-on");
+    renderDots();
+    setMainButton("hide");
+  }
+
+  function hideCard(){
+    $("stage-card").classList.remove("rv-visible");
+    $("spotlight").classList.remove("rv-on");
+    if (deckPos >= deckTotal){
+      $("stage-empty").classList.add("rv-visible");
+      setMainButton("reshuffle");
+    } else {
+      $("stage-idle").style.display = "flex";
+      setMainButton("reveal");
+    }
+  }
+
+  function doReshuffle(){
+    // relit l'agrégat ici seulement : une mise à jour arrivée en arrière-plan
+    // ne s'applique jamais en pleine partie, uniquement à ce moment précis
+    allRows = buildAggregateRows();
+    deck = buildWeightedDeckOrder(buildPool());
+    deckPos = 0;
+    $("stage-empty").classList.remove("rv-visible");
+    $("stage-idle").style.display = "flex";
+    renderDots();
+    setMainButton("reveal");
+  }
+
+  $("btn-main").addEventListener("click", function(){
+    if (stageMode === "reveal") reveal();
+    else if (stageMode === "hide") hideCard();
+    else doReshuffle();
+  });
+
+  $("btn-stage-home").addEventListener("click", goToStart);
+
+  // ---- Settings ---------------------------------------------------------
+  function openSettings(){
+    $("input-csv-url").value = "";
+    hideMsg($("add-source-msg"));
+    renderSourceList();
+    showScreen("settings");
+  }
+  $("btn-home-settings").addEventListener("click", openSettings);
+  $("btn-stage-settings").addEventListener("click", openSettings);
+  $("btn-settings-close").addEventListener("click", function(){ goToStart(); });
+
+  function showMsg(el, text, kind){ el.textContent = text; el.className = "rv-inline-msg rv-visible rv-" + kind; }
+  function hideMsg(el){ el.className = "rv-inline-msg"; }
+
+  function tryAddUrl(url){
+    url = (url || "").trim();
+    if (!url) return;
+    if (!isHttpUrl(url)){ showMsg($("add-source-msg"), "Ça ne ressemble pas à une URL http(s) valide.", "err"); return; }
+    var sources = getSources();
+    if (sources.some(function(s){ return s.url === url; })){
+      showMsg($("add-source-msg"), "Cette source est déjà mémorisée.", "neutral"); return;
+    }
+    showMsg($("add-source-msg"), "Chargement…", "neutral");
+    fetchAndParse(url, function(err, rows){
+      if (err){ showMsg($("add-source-msg"), "Impossible de charger ce CSV. Vérifie qu'il est public et au bon format.", "err"); return; }
+      sources.push({url:url, addedAt: Date.now()});
+      saveSources(sources);
+      setCache(url, rows);
+      showMsg($("add-source-msg"), "Ajoutée : " + uniqueBy(rows,"jeu").length + " jeu(x), " + rows.length + " textes.", "ok");
+      $("input-csv-url").value = "";
+      renderSourceList();
+    });
+  }
+
+  var addInput = $("input-csv-url");
+  addInput.addEventListener("paste", function(){ setTimeout(function(){ tryAddUrl(addInput.value); }, 0); });
+  addInput.addEventListener("keydown", function(e){ if (e.key === "Enter"){ tryAddUrl(addInput.value); } });
+
+  function renderSourceList(){
+    var wrap = $("source-list");
+    wrap.innerHTML = "";
+    var sources = getSources();
+    if (sources.length === 0){
+      var p = document.createElement("p");
+      p.className = "rv-empty-sources";
+      p.textContent = "Aucune source ajoutée pour l'instant — le jeu d'exemple est utilisé.";
+      wrap.appendChild(p);
+      return;
+    }
+    sources.forEach(function(s){ wrap.appendChild(buildSourceCard(s)); });
+  }
+
+  function buildSourceCard(source){
+    var cached = getCache(source.url);
+    var rows = (cached && cached.rows) || [];
+    var gamesHere = uniqueBy(rows, "jeu");
+
+    var card = document.createElement("div");
+    card.className = "rv-source-card";
+    var head = document.createElement("div");
+    head.className = "rv-source-head";
+
+    var infoWrap = document.createElement("div");
+    infoWrap.style.minWidth = "0";
+    var label = document.createElement("div");
+    label.className = "rv-source-label";
+    var domain = "";
+    try { domain = new URL(source.url).hostname; } catch(e){ domain = source.url; }
+    label.textContent = gamesHere.length ? gamesHere.map(function(g){return g.label;}).slice(0,2).join(", ") + (gamesHere.length > 2 ? "…" : "") : domain;
+    var meta = document.createElement("div");
+    meta.className = "rv-source-meta";
+    meta.textContent = gamesHere.length + " jeu(x) · " + rows.length + " texte(s) · " + domain;
+    infoWrap.appendChild(label); infoWrap.appendChild(meta);
+
+    var actions = document.createElement("div");
+    actions.className = "rv-source-actions";
+
+    var refreshBtn = document.createElement("button");
+    refreshBtn.setAttribute("aria-label", "Actualiser"); refreshBtn.title = "Actualiser";
+    refreshBtn.innerHTML = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M23 4v6h-6'/><path d='M1 20v-6h6'/><path d='M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15'/></svg>";
+    refreshBtn.addEventListener("click", function(){
+      meta.textContent = "Actualisation…";
+      fetchAndParse(source.url, function(err, freshRows){
+        if (!err){ setCache(source.url, freshRows); }
+        renderSourceList();
+      });
+    });
+
+    var delBtn = document.createElement("button");
+    delBtn.setAttribute("aria-label", "Supprimer"); delBtn.title = "Supprimer";
+    delBtn.innerHTML = "<svg viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6'/></svg>";
+    delBtn.addEventListener("click", function(){
+      var list = getSources().filter(function(s){ return s.url !== source.url; });
+      saveSources(list); removeCache(source.url); renderSourceList();
+    });
+
+    actions.appendChild(refreshBtn); actions.appendChild(delBtn);
+    head.appendChild(infoWrap); head.appendChild(actions);
+    card.appendChild(head);
+
+    if (gamesHere.length){
+      var details = document.createElement("div");
+      details.className = "rv-source-details";
+      gamesHere.forEach(function(g){
+        var rowsForG = rows.filter(function(r){ return normalizeKey(r.jeu) === g.key; });
+        var catsForG = uniqueBy(rowsForG, "categorie");
+        var line = document.createElement("div");
+        line.className = "rv-source-game-row";
+        var catSummary = catsForG.map(function(c){
+          var n = rowsForG.filter(function(r){ return normalizeKey(r.categorie) === c.key; }).length;
+          return c.label + " (" + n + ")";
+        }).join(" · ");
+        line.innerHTML = "<span>" + escapeHtml(g.label) + "</span><span>" + escapeHtml(catSummary) + "</span>";
+        details.appendChild(line);
+      });
+      card.appendChild(details);
+      head.style.cursor = "pointer";
+      head.addEventListener("click", function(){ details.classList.toggle("rv-open"); });
+    }
+    return card;
+  }
+
+  function escapeHtml(s){ var d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
+
+  $("btn-restore-defaults").addEventListener("click", function(){
+    var sources = getSources();
+    var existingUrls = sources.map(function(s){ return s.url; });
+    var toAdd = DEFAULT_SOURCES.filter(function(u){ return existingUrls.indexOf(u) === -1; });
+    if (!toAdd.length){
+      showMsg($("add-source-msg"), "Rien à restaurer — aucune source par défaut manquante (ou aucune définie).", "neutral");
+      return;
+    }
+    var remaining = toAdd.length;
+    toAdd.forEach(function(u){
+      fetchAndParse(u, function(err, rows){
+        remaining--;
+        if (!err){
+          var list = getSources();
+          if (!list.some(function(s){ return s.url === u; })){
+            list.push({url:u, addedAt: Date.now()});
+            saveSources(list);
+            setCache(u, rows);
+          }
+        }
+        if (remaining === 0) renderSourceList();
+      });
+    });
+  });
+
+  $("btn-home-start").addEventListener("click", bootstrap);
+
+  showScreen("home");
+})();
+</script>
+</body>
+</html>
